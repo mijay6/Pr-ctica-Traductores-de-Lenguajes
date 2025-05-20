@@ -1,0 +1,12 @@
+program TestAsignacion;
+var 
+    x : integer;
+    s : string;
+begin
+    x := 100;
+    write(x);
+    s := 'prueba';
+    write(s);
+    x := x;
+    write(x);
+end;

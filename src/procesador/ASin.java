@@ -104,13 +104,26 @@ public class ASin { // Hacer Bucle
 				// Si el token corresponde a 'ID' entonces introducir id.pos junto con el
 				// terminal
 				if (Token.getType(tokenId).equals("ID")) {
-					Atributos idAtb = new Atributos();
-					idAtb.setTipo(tokenType);
-					idAtb.setPos((int) token.getAtributo());
-					pilaSem.push(idAtb);
-				} else {
-					pilaSem.push(new Atributos());
-				}
+                    Atributos idAtb = new Atributos();
+                    idAtb.setTipo(tokenType);
+                    idAtb.setPos((int) token.getAtributo());
+                    pilaSem.push(idAtb);
+                } 
+                else if (Token.getType(tokenId).equals("ENTERO")) {
+                    Atributos entAtb = new Atributos();
+                    entAtb.setTipo(tokenType);
+                    entAtb.setVal((Integer) token.getAtributo());
+                    pilaSem.push(entAtb);
+                }
+                else if (Token.getType(tokenId).equals("CADENA")) {
+                    Atributos cadAtb = new Atributos();
+                    cadAtb.setTipo(tokenType);
+                    cadAtb.setLex((String) token.getAtributo());
+                    pilaSem.push(cadAtb);
+                }
+                else {
+                    pilaSem.push(new Atributos());
+                }
 
 				// Introducir el nuevo estado
 				pila.push(accion.value);

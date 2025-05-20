@@ -1,0 +1,16 @@
+program TestOpLogicos;
+var 
+    a : boolean;
+    b : boolean;
+    c : boolean;
+begin
+    a := true;
+    b := false;
+    c := a AND b;     
+    write(c);                      
+    c := a AND true;       
+    write(c);          
+    c := false AND b;  
+    write(c);          
+    write(true AND false);
+end;

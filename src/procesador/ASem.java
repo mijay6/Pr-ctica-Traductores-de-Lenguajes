@@ -1,10 +1,14 @@
 package procesador;
 
 import tslib.TS_Gestor.*;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+
 
 //Clase que almacena todos los atributos de los simbolos gramaticales
 //Cada atrbuto con su setter y getter correspondiente
@@ -13,7 +17,6 @@ class Atributos {
 
 	private Integer pos;
 	private String tipo;
-	private String cod;
 	private Integer exit;
 	private String ret;
 	private Integer ancho;
@@ -23,11 +26,13 @@ class Atributos {
     private Integer val;
     private String lex;
 	private Integer program_count;
+	private String lugar;
+	private List<String> listaLugares;
+	private List<String> listaTipos;
 
 	public Atributos() {
 		this.pos = null;
 		this.tipo = null;
-		this.cod = null;
 		this.exit = null;
 		this.ret = null;
 		this.ancho = null;
@@ -37,16 +42,11 @@ class Atributos {
         this.val = null;
         this.lex = null;
 		this.program_count = null;
-
+		this.lugar = null;
+		this.listaLugares = new ArrayList<>();
+		this.listaTipos = new ArrayList<>();
 	}
 	
-	public void setCodigo(String cod) { 
-		this.cod = cod; 
-	}
-	
-	public String getCodigo() { 
-		return cod; 
-	}
 	
     public void setVal(Integer val) {
         this.val = val;
@@ -135,6 +135,29 @@ class Atributos {
 	public int getProgramCount() {
 		return this.program_count;
 	}
+	
+	public void setLugar(String lugar) {
+		this.lugar = lugar;
+	}
+	
+	public String getLugar() {
+		return lugar;
+	}
+	
+	public void setListaLugares(List<String> listaLugares) {
+		this.listaLugares = listaLugares;
+	}
+	public List<String> getListaLugares() {
+		return listaLugares;
+	}
+	public void setListaTipos(List<String> listaTipos) {
+		this.listaTipos = listaTipos;
+	}
+	
+	public List<String> getListaTipos() {
+		return listaTipos;
+	}
+	
 }
 
 public class ASem {
@@ -327,6 +350,8 @@ public class ASem {
 	
 	// Implementacion de todos los analisis semanticos: acc1 - acc100
 	// ***************************************************************************************************************
+	
+	// P -> M1 D R
 	private static Atributos acc1() {
 		Regla reg = MT_ASINT.getRegla(1);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
@@ -339,7 +364,8 @@ public class ASem {
 		destroy(Tabla.GLOBAL);
 		return new Atributos();
 	}
-
+	
+	// M1 -> lambda
 	private static Atributos acc2() {
 		Procesador.gestorTS.createTSGlobal();
 		tsGlobal = true;
@@ -382,9 +408,7 @@ public class ASem {
 	}
 	
 		
-	// TODO: Modificacion de la regla para el programa principal/estructura general
-	// Aquí se podria insertar el cuarteto que marca la etiqueta "main"
-	
+	// PP -> program PPid ; D M2 bloque ;
 	private static Atributos acc7() {
 		Regla reg = MT_ASINT.getRegla(7);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
@@ -398,24 +422,32 @@ public class ASem {
 		if (bloqueAtb.getExit() > 0) {
 			GestorError.writeError("Exit fuera de bucle detectado en Programa Principal");
 		}
+		// Para el GCI
+		GCI.addCuarteto("HALT", null, null, null);
+		
 		destroy(Tabla.LOCAL);
 		tsGlobal = true;
 		zonaDeclaracion = true;
 		return new Atributos();
 	}
 
-	// TODO: Modificacion para procedimientos
-	
+	// PPid -> Pid
 	private static Atributos acc8() {
 		Regla reg = MT_ASINT.getRegla(8);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
 		Atributos pidAtb = atb[1];
+		
 		Procesador.gestorTS.setTipo(pidAtb.getPos(), "procedimiento"); // Checkear error de gestor TS.
 		Procesador.gestorTS.setValorAtributoEnt(pidAtb.getPos(), "numParametro", 0);
 		Procesador.gestorTS.setValorAtributoCad(pidAtb.getPos(), "etiqueta", "main");
-		return new Atributos();
+		
+		// Para el GCI
+		GCI.addCuarteto("ETIQ", Cuarteto.formatArg("ET", "main"), null, null);
+		// PPid no necesita pasar atributos hacia arriba para GCI
+		return new Atributos(); 
 	}
-
+	
+	// Pid -> id
 	private static Atributos acc9() {
 		tsGlobal = false;
 		despLocal = 0;
@@ -427,7 +459,8 @@ public class ASem {
 		res.setPos(idAtb.getPos());
 		return res;
 	}
-
+	
+	// M2 -> lambda
 	private static Atributos acc10() {
 		zonaDeclaracion = false;
 		return new Atributos();
@@ -515,14 +548,16 @@ public class ASem {
 		return res;
 	}
 
-	// TODO: Modificacion declaracion de variables
 	
+	
+	// D -> var id : T ; DD
 	private static Atributos acc15() {
 		Regla reg = MT_ASINT.getRegla(15);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
 		Atributos idAtb = atb[9];
 		Atributos tAtb = atb[5];
 		Procesador.gestorTS.setTipo(idAtb.getPos(), tAtb.getTipo());
+		Procesador.gestorTS.setValorAtributoEnt(idAtb.getPos(), "modoParametro", 0); 
 		if (tsGlobal) {
 			Procesador.gestorTS.setValorAtributoEnt(idAtb.getPos(), "desplazamiento", despGlobal);
 			despGlobal += tAtb.getAncho();
@@ -533,19 +568,19 @@ public class ASem {
 		return new Atributos();
 	}
 
+	// D -> lambda
 	private static Atributos acc16() {
 		return new Atributos();
 	}
 		
-	
-	// TODO: Modificacion declaracion de variables
-
+	// DD -> var id : T ; DD
 	private static Atributos acc17() {
 		Regla reg = MT_ASINT.getRegla(17);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
 		Atributos idAtb = atb[9];
 		Atributos tAtb = atb[5];
 		Procesador.gestorTS.setTipo(idAtb.getPos(), tAtb.getTipo());
+		Procesador.gestorTS.setValorAtributoEnt(idAtb.getPos(), "modoParametro", 0); 
 		if (tsGlobal) {
 			Procesador.gestorTS.setValorAtributoEnt(idAtb.getPos(), "desplazamiento", despGlobal);
 			despGlobal += tAtb.getAncho();
@@ -555,7 +590,8 @@ public class ASem {
 		}
 		return new Atributos();
 	}
-
+	
+	// DD -> lambda
 	private static Atributos acc18() {
 		return new Atributos();
 	}
@@ -664,7 +700,9 @@ public class ASem {
 		res.setLong(0);
 		return res;
 	}
-
+	
+	// TODO: Si C generara una lsita de lugares o tipos se propagaria, asi que considerar implementar
+	// Bloque -> begin C end
 	private static Atributos acc26() {
 		Regla reg = MT_ASINT.getRegla(26);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
@@ -701,7 +739,8 @@ public class ASem {
 		}
 		return res;
 	}
-
+	
+	// C -> Lambda
 	private static Atributos acc28() {
 		Atributos res = new Atributos();
 		res.setTipo("tipo_ok");
@@ -1001,25 +1040,45 @@ public class ASem {
 	}
 
 	
-	// TODO: Modificar sentencia de salida
-	
+	// S -> write LL
 	private static Atributos acc48() {
 		Regla reg = MT_ASINT.getRegla(48);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
-		Atributos res = new Atributos();
 		Atributos llATB = atb[3];
+		
+		Atributos res = new Atributos();
 		res.setTipo("tipo_ok");
+		
+		// validacion sematica de la sentencia 
 		if (llATB.getTipo() != null) {
 			String[] tipos = llATB.getTipo().split("\\s+");
 			if (!(tipos.length == 1 && tipos[0].equals(""))) {
 				for (int i = 0; i < tipos.length; i++) {
 					String tipo = tipos[i];
-					if (!tipo.equals("entero") && !tipo.equals("cadena")) {
+					if (!tipo.equals("entero") && !tipo.equals("cadena") && !tipo.equals("lógico")) { //(Modificada para que tambien acepte logicos)
 						GestorError.setError(Acciones.eSem2_tipo_incompatible,
-								"la sentencia WRITE solo acepta entero o cadena, " + "pero ha recibido " + tipo);
+								"la sentencia WRITE solo acepta entero, lógico o cadena, " + "pero ha recibido " + tipo);
 						res.setTipo("tipo_error");
 						break;
 					}
+				}
+			}
+		}
+		
+		// para el GCI
+		if (res.getTipo().equals("tipo_ok") && llATB.getTipo() != null) {
+			
+			List<String> lugares = llATB.getListaLugares();
+			List<String> tiposExp = llATB.getListaTipos();
+			
+			for (int i = 0; i < lugares.size(); i++) {
+				String lugarArg = lugares.get(i);
+				String tipoArg = tiposExp.get(i);
+				
+				if (tipoArg.equals("entero") || tipoArg.equals("lógico")) {// los lógicos se imprimen como enteros
+					GCI.addCuarteto("PRINT_ENT", null, null, lugarArg);
+				} else if (tipoArg.equals("cadena")) {
+					GCI.addCuarteto("PRINT_CAD", null, null, lugarArg);
 				}
 			}
 		}
@@ -1028,14 +1087,17 @@ public class ASem {
 		return res;
 	}
 	
-	// TODO: Modificar sentencia de salida
+
 	
+	// S -> writeln LL
 	private static Atributos acc49() {
 		Regla reg = MT_ASINT.getRegla(49);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
-		Atributos res = new Atributos();
 		Atributos llATB = atb[3];
+		
+		Atributos res = new Atributos();
 		res.setTipo("tipo_ok");
+		
 		if (llATB.getTipo() != null) {
 			String[] tipos = llATB.getTipo().split("\\s+");
 			if (!(tipos.length == 1 && tipos[0].equals(""))) {
@@ -1050,20 +1112,42 @@ public class ASem {
 				}
 			}
 		}
+		// para el GCI
+		if (res.getTipo().equals("tipo_ok") && llATB.getTipo() != null) {
+			
+			List<String> lugares = llATB.getListaLugares();
+			List<String> tiposExp = llATB.getListaTipos();
+			
+			for (int i = 0; i < lugares.size(); i++) {
+				String lugarArg = lugares.get(i);
+				String tipoArg = tiposExp.get(i);
+				
+				if (tipoArg.equals("entero") || tipoArg.equals("lógico")) {
+					GCI.addCuarteto("PRINT_ENT", null, null, lugarArg);
+				} else if (tipoArg.equals("cadena")) {
+					GCI.addCuarteto("PRINT_CAD", null, null, lugarArg);
+				}
+			}
+		}
+		
+		// Añadir el salto de linea
+		String newlineLugar = Cuarteto.formatArg("CTE_CAD", "\"\\n\"");
+		GCI.addCuarteto("PRINT_CAD", null, null, newlineLugar);
+		
 		res.setExit(0);
 		res.setRet("tipo_ok");
 		return res;
 	}
 	
-	
-	// TODO: Modificar sentencia de entrada
-	
+	// S -> read ( V ) ;
 	private static Atributos acc50() {
 		Regla reg = MT_ASINT.getRegla(50);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
+		
 		Atributos res = new Atributos();
 		Atributos vATB = atb[5];
 		res.setTipo("tipo_ok");
+		
 		String[] tipos = vATB.getTipo().split("\\s+");
 		for (int i = 0; i < tipos.length; i++) {
 			String tipo = tipos[i];
@@ -1074,54 +1158,88 @@ public class ASem {
 				break;
 			}
 		}
+		
+		// para el GCI
+		if (res.getTipo().equals("tipo_ok")) { 
+	        List<String> lugares = vATB.getListaLugares();
+	        List<String> tiposVar = vATB.getListaTipos(); 
+
+	        for (int i = 0; i < lugares.size(); i++) {
+	            String lugarVar = lugares.get(i);
+	            String tipoVariable = tiposVar.get(i);
+
+	            if (tipoVariable.equals("entero")) {
+	                GCI.addCuarteto("INPUT_ENT", null, null, lugarVar);
+	            } else if (tipoVariable.equals("cadena")) {
+	                GCI.addCuarteto("INPUT_CAD", null, null, lugarVar);
+	            }
+	        }
+	    }		
 		res.setExit(0);
 		res.setRet("tipo_ok");
 		return res;
 	}
 
-	
-	// TODO: Modificar este metodo para la sentencia de asignacion
-	// En este caso se observa que no hay conversion de tipos.
-	
+	// S -> id := E ;
 	private static Atributos acc51() {
 		Regla reg = MT_ASINT.getRegla(51);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
 		
-		String eTipo = atb[3].getTipo();
-		Integer idPos = atb[7].getPos();
+		Atributos idATB = atb[7]; // atributos del id
+		Atributos eATB = atb[3]; // atributos de la expresion
+		
+		String eTipo = eATB.getTipo(); 
+		Integer idPos = idATB.getPos(); 
 		String idTipo = Procesador.gestorTS.getTipo(idPos);
 		
-		// Caso correcto: los tipos son compatibles y sin error
+		Atributos res = new Atributos();
+		
 		if (idTipo.equals(eTipo) && !eTipo.equals("tipo_error")) {
-			
-			
-			// obtener el desplazamiento del identificador
-			
-			int desp = Procesador.gestorTS.getValorAtributoEnt(idPos, "desplazamiento");
-			
-			boolean esGlobal = desp < despLocal;
-			
-			String ambito = esGlobal ? "VAR_GLOBAL" : "VAR_LOCAL";
-			
-			
-			// El lugar de la expresión puede ser:
-			// - Un temporal si viene de una expresión
-			// - Una dirección si es una variable
-			// - Un valor directo si es una constante
-			
-			// String exprLugar = atb[3].getLugar();
-			
-
-			// GCI.addCuarteto("ASIG", exprEtiqueta, "-", idEtiqueta); // arreglar
-			
-			
-			Atributos res = new Atributos();
 			res.setTipo("tipo_ok");
-			res.setExit(0);
-			res.setRet("tipo_ok");
-			return res;
-		} else { 
-			// en las ramas de error, se mantiene el manejo existente. No se generar cuartetos si falla
+			// Para el GCI
+			
+			String idlugar;
+			
+			int idDesp = Procesador.gestorTS.getValorAtributoEnt(idATB.getPos(), "desplazamiento");
+			
+			if (idDesp == -1 && idPos!= 0) { // pos 0 es especial (no encontrado o error)
+			    System.out.println("DEBUG ASem acc51: getValorAtributoEnt para 'desplazamiento' de pos " + idPos + " devolvió -1 (error)");
+			}
+			
+			if (idPos > 0) {
+				idlugar = Cuarteto.formatArg("VAR_GLOBAL", idDesp);	
+			} else {
+				// Par ver si es una variable por referenccia/param por ref o normal/param por valor
+				Integer modoParam = Procesador.gestorTS.getValorAtributoEnt(idATB.getPos(), "modoParametro");
+				
+				if (modoParam == -1 && idPos != 0) {
+				     System.out.println("DEBUG ASem acc51: getValorAtributoEnt para 'modoParametro' de pos " + idPos + " devolvió -1 (error)");
+				}
+				
+				if (modoParam != null && modoParam == 1) { // signidica que es un VAR (por referencia)
+					idlugar = Cuarteto.formatArg("PAR_REF", idDesp);
+					
+					// El lugar de PAR_REF es su propia direccion
+					String lugarParamRef = Cuarteto.formatArg("VAR_LOCAL" , idDesp);
+					
+					if(eTipo.equals("cadena")) {
+						GCI.addCuarteto("PTR_ASIG_CAD", eATB.getLugar(), null, lugarParamRef);
+					} else {
+						GCI.addCuarteto("PTR_ASIG", eATB.getLugar(), null, lugarParamRef);
+					}
+					
+				}
+				else { // variable normal o por valor
+					idlugar = Cuarteto.formatArg("VAR_LOCAL", idDesp);
+					
+					if(eTipo.equals("cadena")) {
+						GCI.addCuarteto("ASIG_CAD", eATB.getLugar(), null, idlugar);
+					} else {
+						GCI.addCuarteto("ASIG", eATB.getLugar(), null, idlugar);
+					}
+				}
+			}	
+		} else {
 			if (idTipo.equals("función") && eTipo.equals("función")) {
 				GestorError.writeError("Las funciones no pueden ser asignados a otra función");
 			} else if (idTipo.equals("función")) {
@@ -1141,17 +1259,16 @@ public class ASem {
 						Procesador.gestorTS.getTipo(idPos) + " no es compatible con " + eTipo);
 			}
 
-			Atributos res = new Atributos();
 			res.setTipo("tipo_error");
-			res.setExit(0);
-			res.setRet("tipo_ok");
-			return res;
 		}
+		
+		res.setExit(0);
+		res.setRet("tipo_ok");
+		return res;
 	}
 
 	
 	// TODO: modificar llamada a subprograma(procedimiento)
-	
 	private static Atributos acc52() {
 		Regla reg = MT_ASINT.getRegla(52);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
@@ -1237,46 +1354,78 @@ public class ASem {
 		res.setRet("tipo_ok");
 		return res;
 	}
-
+	
+	
+	// LL -> ( L )
 	private static Atributos acc55() {
 		Regla reg = MT_ASINT.getRegla(55);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
 		Atributos lATB = atb[3];
+		
 		Atributos res = new Atributos();
 		res.setTipo(lATB.getTipo());
 		res.setLong(lATB.getLongs());
+		
+		// para el GCI
+		res.setListaLugares(lATB.getListaLugares());
+		res.setListaTipos(lATB.getListaTipos());
 		return res;
 	}
-
+	
+	// LL -> Lambda
 	private static Atributos acc56() {
 		Atributos res = new Atributos();
 		res.setTipo("");
 		res.setLong(0);
+		// para el GCI
+		res.setListaLugares(new ArrayList<>()); // lista vacia
+		res.setListaTipos(new ArrayList<>()); // lista vacia
 		return res;
 	}
 
+	
+	// L -> E Q
 	private static Atributos acc57() {
 		Regla reg = MT_ASINT.getRegla(57);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
+		Atributos qATB = atb[1];  // atributos de q
+		Atributos eATB = atb[3];  // atributos de e
+		
 		Atributos res = new Atributos();
-		Atributos qATB = atb[1];
-		Atributos eATB = atb[3];
+		
 		if (qATB.getTipo().equals("")) {
 			res.setTipo(eATB.getTipo());
 		} else {
 			res.setTipo(eATB.getTipo() + " " + qATB.getTipo());
 		}
 		res.setLong(1 + qATB.getLongs());
+		
+		// para el GCI
+		
+		List<String> lugares = new ArrayList<>();
+	    List<String> tipos = new ArrayList<>();
+
+	    if (eATB.getLugar() != null) {
+	        lugares.add(eATB.getLugar());
+	        tipos.add(eATB.getTipo());
+	    }
+	    if (qATB.getListaLugares() != null) { 		// Q debe tener un atributo listaLugares
+	        lugares.addAll(qATB.getListaLugares());
+	        tipos.addAll(qATB.getListaTipos()); 	// Y listaTipos
+	    }
+	    res.setListaLugares(lugares);
+	    res.setListaTipos(tipos);
 		return res;
 	}
 
+	// Q -> , E Q1
 	private static Atributos acc58() {
 		Regla reg = MT_ASINT.getRegla(58);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
 		Atributos res = new Atributos();
 
-		Atributos q1ATB = atb[1];
-		Atributos eATB = atb[3];
+		Atributos q1ATB = atb[1]; // atributos de q1
+		Atributos eATB = atb[3]; // atributos de e
 
 		if (q1ATB.getTipo().equals("")) {
 			res.setTipo(eATB.getTipo());
@@ -1284,22 +1433,45 @@ public class ASem {
 			res.setTipo(eATB.getTipo() + " " + q1ATB.getTipo());
 		}
 		res.setLong(1 + q1ATB.getLongs());
-		return res;
+
+		// para el GCI
+		List<String> lugares = new ArrayList<>();
+	    List<String> tipos = new ArrayList<>();
+
+	    if (eATB.getLugar() != null) {
+	        lugares.add(eATB.getLugar());
+	        tipos.add(eATB.getTipo());
+	    }
+	    if (q1ATB.getListaLugares() != null) { 		
+	        lugares.addAll(q1ATB.getListaLugares());
+	        tipos.addAll(q1ATB.getListaTipos());
+	    }
+	    res.setListaLugares(lugares);
+	    res.setListaTipos(tipos);
+	    
+		return res;		
 	}
 
+	// Q -> Lambda
 	private static Atributos acc59() {
 		Atributos res = new Atributos();
 		res.setTipo("");
 		res.setLong(0);
+		// Para el GCI
+		res.setListaLugares(new ArrayList<>()); // Lista vacia
+		res.setListaTipos(new ArrayList<>()); // Lista vacia
 		return res;
 	}
-
+	
+	// V -> id W
 	private static Atributos acc60() {
 		Regla reg = MT_ASINT.getRegla(60);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
-		Atributos res = new Atributos();
 		Atributos wATB = atb[1];
 		Atributos idATB = atb[3];
+		
+		Atributos res = new Atributos();
+	    String idTipo = Procesador.gestorTS.getTipo(idATB.getPos());
 
 		if (wATB.getTipo().equals("")) {
 			res.setTipo(Procesador.gestorTS.getTipo(idATB.getPos()));
@@ -1307,29 +1479,87 @@ public class ASem {
 			res.setTipo(Procesador.gestorTS.getTipo(idATB.getPos()) + " " + wATB.getTipo());
 		}
 		res.setLong(1 + wATB.getLongs());
+		
+		// para el GCI
+		
+		List<String> lugares = new ArrayList<>();
+	    List<String> tipos = new ArrayList<>();
+
+	    if (idTipo != null) { // solo si el id es valido
+	        int idDesp = Procesador.gestorTS.getValorAtributoEnt(idATB.getPos(), "desplazamiento");
+	        String claseVar;
+	        if (idATB.getPos() > 0) { // Global
+	            claseVar = "VAR_GLOBAL";
+	        } else { // Local
+	            claseVar = "VAR_LOCAL";
+	        }
+	        lugares.add(Cuarteto.formatArg(claseVar, idDesp));
+	        tipos.add(idTipo);
+	    }
+
+	    if (wATB.getListaLugares() != null) {
+	        lugares.addAll(wATB.getListaLugares());
+	        tipos.addAll(wATB.getListaTipos());
+	    }
+	    
+	    res.setListaLugares(lugares);
+	    res.setListaTipos(tipos);
 		return res;
 	}
-
+	
+	// W -> , id W1
 	private static Atributos acc61() {
 		Regla reg = MT_ASINT.getRegla(61);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
-		Atributos res = new Atributos();
 		Atributos w1ATB = atb[1];
 		Atributos idATB = atb[3];
+		
+		Atributos res = new Atributos();
+	    String idTipo = Procesador.gestorTS.getTipo(idATB.getPos());
 
-		if (w1ATB.getTipo().equals("")) {
+	    if (w1ATB.getTipo().equals("")) {
 			res.setTipo(Procesador.gestorTS.getTipo(idATB.getPos()));
 		} else {
 			res.setTipo(Procesador.gestorTS.getTipo(idATB.getPos()) + " " + w1ATB.getTipo());
 		}
 		res.setLong(1 + w1ATB.getLongs());
+		
+		// para el GCI
+		
+		List<String> lugares = new ArrayList<>();
+	    List<String> tipos = new ArrayList<>();
+	    
+	    if (idTipo != null) { 
+	        int idDesp = Procesador.gestorTS.getValorAtributoEnt(idATB.getPos(), "desplazamiento");
+	        String claseVar;
+	        if (idATB.getPos() > 0) { 
+	            claseVar = "VAR_GLOBAL";
+	        } else { 
+	            claseVar = "VAR_LOCAL";
+	        }
+	        lugares.add(Cuarteto.formatArg(claseVar, idDesp));
+	        tipos.add(idTipo);
+	    }
+	    
+        if (w1ATB.getListaLugares() != null) {
+            lugares.addAll(w1ATB.getListaLugares());
+            tipos.addAll(w1ATB.getListaTipos());
+        }
+        
+	    res.setListaLugares(lugares);
+	    res.setListaTipos(tipos);
 		return res;
 	}
-
+	
+	// W -> Lambda
 	private static Atributos acc62() {
 		Atributos res = new Atributos();
 		res.setTipo("");
 		res.setLong(0);
+		
+		// para el GCI
+		res.setListaLugares(new ArrayList<>()); // lista vacia
+		res.setListaTipos(new ArrayList<>()); // lista vacia
 		return res;
 	}
 
@@ -1383,37 +1613,48 @@ public class ASem {
 		return res;
 	}
 
+	// E -> F
 	private static Atributos acc67() {
 		Regla reg = MT_ASINT.getRegla(67);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
 		Atributos res = new Atributos();
-		res.setTipo(atb[1].getTipo());
+		res.setTipo(atb[1].getTipo()); // E.tipo = F.tipo
+		// para el GCI
+		res.setLugar(atb[1].getLugar()); // E.lugar = F.lugar
 		return res;
 	}
 
+	// F -> F1 and G
 	private static Atributos acc68() {
 		Regla reg = MT_ASINT.getRegla(68);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
 		Atributos res = new Atributos();
 		Atributos f1ATB = atb[5];
 		Atributos gATB = atb[1];
-		if (f1ATB.getTipo().equals(gATB.getTipo()) && f1ATB.getTipo().equals("lógico")) {
+		if (f1ATB.getTipo().equals(gATB.getTipo()) && f1ATB.getTipo().equals("lógico") && !tsGlobal) {
 			res.setTipo("lógico");
+			// para el GCI
+			String tempLugar;
+			tempLugar = Cuarteto.formatArg("VAR_TEMP", despLocal);
+			despLocal++;
+            GCI.addCuarteto("AND", f1ATB.getLugar(), gATB.getLugar(), tempLugar);
+            res.setLugar(tempLugar);
 		} else {
 			GestorError.setError(Acciones.eSem2_tipo_incompatible,
 					"tipo actual: " + f1ATB.getTipo() + " y " + gATB.getTipo() + "; tipo esperado: lógico y lógico");
-
 			res.setTipo("tipo_error");
 		}
 		return res;
 	}
 
+	// F -> G
 	private static Atributos acc69() {
 		Regla reg = MT_ASINT.getRegla(69);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
-		Atributos gATB = atb[1];
 		Atributos res = new Atributos();
-		res.setTipo(gATB.getTipo());
+		res.setTipo(atb[1].getTipo()); // F.tipo = G.tipo
+		// para el GCI
+		res.setLugar(atb[1].getLugar()); // F.lugar = G.lugar
 		return res;
 	}
 
@@ -1488,23 +1729,54 @@ public class ASem {
 			return res;
 		}
 	}
-
+	
+	// G -> G1 < H
+	// TODO: verificar que hacemos aqui
 	private static Atributos acc74() {
 		Regla reg = MT_ASINT.getRegla(74);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
 		String gTipo = atb[5].getTipo();
 		String hTipo = atb[1].getTipo();
-		if (gTipo.equals(hTipo) && hTipo.equals("entero")) {
-			Atributos res = new Atributos();
+		String gLugar = atb[5].getLugar();
+		String hLugar = atb[1].getLugar();
+		
+		Atributos res = new Atributos();
+		
+		if (gTipo.equals(hTipo) && hTipo.equals("entero") && !tsGlobal) {
 			res.setTipo("lógico");
-			return res;
+			
+			// Para el GCI
+			String tempLugar;
+            tempLugar = Cuarteto.formatArg("VAR_TEMP", despLocal);
+            despLocal++;
+            
+            // Generar etiquetas para el GOTO
+        	String etFalso = "ET" + numEtiq++; 
+            String etVerdadero = "ET" + numEtiq++;
+            
+            // Asumimos true (1) por defecto
+            GCI.addCuarteto("ASIG", Cuarteto.formatArg("CTE_ENT", 1), null, tempLugar);
+            
+            // si H=>G1, saltar a la etiqueta de falso
+            GCI.addCuarteto("GOTO_MAY_IG", gLugar, hLugar, Cuarteto.formatArg("ET", etFalso));
+            
+            // salto incondicional a la etiqueta de verdadero
+            GCI.addCuarteto("GOTO", null, null, Cuarteto.formatArg("ET", etVerdadero));
+            
+            // Etiqueta y asignación para el caso falso
+            GCI.addCuarteto("ETIQ", Cuarteto.formatArg("ET", etFalso), null, null);
+            GCI.addCuarteto("ASIG", Cuarteto.formatArg("CTE_ENT", 0), null, tempLugar);
+            
+            // Etiqueta para el caso verdadero (no asignamos porwue ya es 1 por defecto)
+            GCI.addCuarteto("ETIQ", Cuarteto.formatArg("ET", etVerdadero), null, null);
+            
+            res.setLugar(tempLugar); // la temporal sera 0 o 1 (tipo lógico)
 		} else {
 			GestorError.setError(Acciones.eSem2_tipo_incompatible,
 					"tipo actual: " + gTipo + " y " + hTipo + "; tipo esperado: entero y entero");
-			Atributos res = new Atributos();
-			res.setTipo("tipo_error");
-			return res;
+			res.setTipo("tipo_error");	
 		}
+		return res;
 	}
 
 	private static Atributos acc75() {
@@ -1525,30 +1797,62 @@ public class ASem {
 		}
 	}
 
+	// G -> H
 	private static Atributos acc76() {
 		Regla reg = MT_ASINT.getRegla(76);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
 		Atributos res = new Atributos();
-		res.setTipo(atb[1].getTipo());
+		res.setTipo(atb[1].getTipo()); // G.tipo = H.tipo
+		// Para el GCI
+		res.setLugar(atb[1].getLugar()); // G.lugar = H.lugar	
 		return res;
 	}
-
+	
+	// H -> H1 + I
 	private static Atributos acc77() {
 		Regla reg = MT_ASINT.getRegla(77);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
 		String iTipo = atb[1].getTipo();
 		String h1Tipo = atb[5].getTipo();
-		if (iTipo.equals(h1Tipo) && (iTipo.equals("entero") || iTipo.equals("cadena"))) {
-			Atributos res = new Atributos();
-			res.setTipo(h1Tipo);
-			return res;
+		String iALugar = atb[1].getLugar();
+		String h1Lugar = atb[5].getLugar();
+		
+		Atributos res = new Atributos();
+		
+		// PARA EL GCI
+		if (iTipo.equals(h1Tipo) && !tsGlobal) {
+			String templugar;
+			
+			if(iTipo.equals("entero")) {
+				if(zonaDeclaracion) {
+	                GestorError.writeError("GCI Error: Intentando generar temporal (" + GCI.nuevaTemp() + ") en zona de declaración para SUMA.");
+				}
+				
+				templugar = Cuarteto.formatArg("VAR_TEMP", despLocal);
+				despLocal++;
+				
+                GCI.addCuarteto("SUMA", h1Lugar, iALugar, templugar);				
+				res.setTipo(h1Tipo);
+				res.setLugar(templugar);
+			}
+			else if(iTipo.equals("cadena")) {
+				
+				templugar = Cuarteto.formatArg("VAR_TEMP", despLocal);
+				despLocal++;
+
+                GCI.addCuarteto("CONCAT", h1Lugar, iALugar, templugar);
+				res.setTipo(h1Tipo);
+				res.setLugar(templugar);
+			}
+			
 		} else {
 			GestorError.setError(Acciones.eSem2_tipo_incompatible,
 					"tipo actual: " + iTipo + " y " + h1Tipo + "; tipo esperado: entero y entero o cadena y cadena");
-			Atributos res = new Atributos();
+			
 			res.setTipo("tipo_error");
-			return res;
 		}
+		
+		return res;
 	}
 
 	private static Atributos acc78() {
@@ -1569,11 +1873,14 @@ public class ASem {
 		}
 	}
 
+	// H -> I
 	private static Atributos acc79() {
 		Regla reg = MT_ASINT.getRegla(79);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
 		Atributos res = new Atributos();
-		res.setTipo(atb[1].getTipo());
+		res.setTipo(atb[1].getTipo()); // H.tipo = I.tipo
+		// Para el GCI 
+		res.setLugar(atb[1].getLugar()); // H.lugar = I.lugar
 		return res;
 	}
 
@@ -1631,11 +1938,14 @@ public class ASem {
 		}
 	}
 
+	// I -> J
 	private static Atributos acc83() {
 		Regla reg = MT_ASINT.getRegla(83);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
 		Atributos res = new Atributos();
-		res.setTipo(atb[1].getTipo());
+		res.setTipo(atb[1].getTipo());  // I.tipo = J.tipo
+		// Para el GCI
+		res.setLugar(atb[1].getLugar()); // I.lugar = J.lugar
 		return res;
 	}
 
@@ -1657,11 +1967,14 @@ public class ASem {
 		}
 	}
 
+	// J -> K
 	private static Atributos acc85() {
 		Regla reg = MT_ASINT.getRegla(85);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
 		Atributos res = new Atributos();
-		res.setTipo(atb[1].getTipo());
+		res.setTipo(atb[1].getTipo()); // J.tipo = K.tipo
+		// Para el GCI
+		res.setLugar(atb[1].getLugar()); // J.lugar = K.lugar
 		return res;
 	}
 
@@ -1713,45 +2026,81 @@ public class ASem {
 		}
 	}
 
+	// K -> Z
 	private static Atributos acc89() {
 		Regla reg = MT_ASINT.getRegla(89);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
 		Atributos res = new Atributos();
-		res.setTipo(atb[1].getTipo());
+		res.setTipo(atb[1].getTipo());   // K.tipo = Z.tipo
+		// Para el GCI
+		res.setLugar(atb[1].getLugar()); // K.lugar = Z.lugar
 		return res;
 	}
 	
-	// las acciones 90-93 establecen los tipos para constantes
-	// en principio no se necesitan realizar cambios
-	
-	
+	// Z -> entero
 	private static Atributos acc90() {
+		Regla reg = MT_ASINT.getRegla(90);
+		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
+		// atb[1] contiene los atributos del token 'entero'. 
+		// ASin.java ya se encargó de poner el valor del token en atb[1].val		
+		
 		Atributos res = new Atributos();
 		res.setTipo("entero");
+		
+		Integer valorEntero = atb[1].getVal();
+		if (valorEntero != null) {
+			res.setVal(valorEntero); // propagar el valor numerico para semántica si es necesario
+			// Para el GCI
+			res.setLugar(Cuarteto.formatArg("CTE_ENT", valorEntero));  // formato: {CTE_ENT, valor}
+		} else {
+			GestorError.writeError("El valor del token entero es null.");
+			res.setTipo("tipo_error");
+		}
 		return res;
 	}
-
+	
+	// Z -> cadena
 	private static Atributos acc91() {
+		Regla reg = MT_ASINT.getRegla(91);
+		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
+		// atb[1] contiene los atributos del token 'cadena'.
+		// ASin.java ya puso el lexema en atb[1].lex
+		
 		Atributos res = new Atributos();
 		res.setTipo("cadena");
+		
+		String valorCadena = atb[1].getLex();
+		if (valorCadena != null) {
+	        res.setLex(valorCadena); // Propagar lexema para semántica si es necesario
+	        // Para el GCI
+	        res.setLugar(Cuarteto.formatArg("CTE_CAD", "\"" + valorCadena + "\"")); // formato: {CTE_CAD, "valor"}
+
+		} else {
+			GestorError.writeError("El lexema del token cadena es null.");
+			res.setTipo("tipo_error");
+		}	
 		return res;
 	}
-
+	
+	// Z -> true
 	private static Atributos acc92() {
 		Atributos res = new Atributos();
 		res.setTipo("lógico");
+		// Para el GCI
+		res.setLugar(Cuarteto.formatArg("CTE_ENT", 1)); // true como constante entera 1
 		return res;
 	}
-
+	
+	// Z -> false
 	private static Atributos acc93() {
 		Atributos res = new Atributos();
 		res.setTipo("lógico");
+		// Para el GCI
+		res.setLugar(Cuarteto.formatArg("CTE_ENT", 0)); // false como constante entera 0
 		return res;
 	}
-
 	
-	// TODO: MOdificar para procedimiento
-	
+	// Z -> id LL
 	private static Atributos acc94() {
 		Regla reg = MT_ASINT.getRegla(94);
 		Atributos[] atb = ASin.pilaSem.toArray(new Atributos[reg.numElementos * 2]);
@@ -1802,6 +2151,20 @@ public class ASem {
 		} else if (idTipo.equalsIgnoreCase("entero") || idTipo.equalsIgnoreCase("lógico")
 				|| idTipo.equalsIgnoreCase("cadena") && llAtb.getTipo().equals("")) {
 			res.setTipo(idTipo);
+			
+			// Para el GCI
+			int despID = Procesador.gestorTS.getValorAtributoEnt(idAtb.getPos(), "desplazamiento");
+			String claseVar;
+			
+			if(idAtb.getPos() > 0) {
+				claseVar = "VAR_GLOBAL";
+			}else {
+				claseVar = "VAR_LOCAL";
+				// TODO: Tambien poder distinguir entre VAR_LOCAL y PAR o PAR_REF
+			
+			}
+			res.setLugar(Cuarteto.formatArg(claseVar, despID)); // formato: {VAR..., despID}			
+			
 		} else {
 			GestorError.setError(Acciones.eSem2_tipo_incompatible,
 					"tipo actual: " + idTipo + "; tipo esperado: {entero, lógico, cadena}");

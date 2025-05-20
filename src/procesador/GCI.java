@@ -1,59 +1,47 @@
 package procesador;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class GCI {
-	
-	// Lista para almacenar los cuartetos generados
-	private List<String> cuartetos;
-	
-	// Contadores para desplazamiento de  temporales, no locales y etiquetas
-	private static int despTemp;
-	private static int despNoLoc;
-	private static int etiqCounter;
-	
-	// Constructor
-	public GCI() {
-		cuartetos = new ArrayList<>();
-		despTemp = 0;
-		despNoLoc = 0;
-		etiqCounter = 0;
-	}
-	
-	
-	// TODO: hay que tener en cuente que puede tener espacios que se desee entre parámetros
-	
-	// genera cuarteto con el formato especifico
-	public void addCuarteto(String op, String arg1Clase, String arg1Valor, String arg2Clase, String arg2Valor, String resClase, String resValor){
-		String cuarteto = String.format("(%s, {%s, %s}, {%s, %s}, {%s, %s})", op, arg1Clase, arg1Valor, arg2Clase, arg2Valor, resClase, resValor);
-		cuartetos.add(cuarteto);
-	}
-	
+    private static List<Cuarteto> cuartetos = new ArrayList<>();
+    private static int tempCounter = 0; // Contador para variables temporales
+    private static int labelCounter = 0; // Contador para etiquetas
 
-	
-	// Genera un nuevo nombre para una variable temporal.
-	public static String nuevaTemp() {
-		return "t" + (despTemp++);
-	}
-	
-	// Genera un nuevo nombre para una variable no local.
-	public static String nuevaNoLoc() {
-		return "nl" + (despNoLoc++);
-	}
-	
-	
-	// Genera una nueva etiqueta.
-	public static String nuevaEtiqueta() {
-        return "L" + (etiqCounter++);
+    public static void addCuarteto(String op, String arg1, String arg2, String res) {
+        cuartetos.add(new Cuarteto(op, arg1, arg2, res));
     }
-	
-	
-	// Obtiene la lista de cuartetos generados
-    public List<String> getCuartetos() {
-        return cuartetos;
-    }
-	
 
+    public static void addCuarteto(Cuarteto c) {
+        cuartetos.add(c);
+    }
+    
+    // Genera un nuevo nombre para variable temporal
+    public static String nuevaTemp() {
+        return "t" + tempCounter++;
+    }
+
+    // Genera un nuevo nombre para etiqueta
+    public static String nuevaEtiqueta() {
+        return "ET" + labelCounter++;
+    }
+
+    public static void escribirCuartetos(String nombreFichero) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(nombreFichero))) {
+            for (Cuarteto c : cuartetos) {
+                bw.write(c.toString() + "\n");
+            }
+        } catch (IOException e) {
+            System.err.println("Error al escribir el fichero de cuartetos: " + e.getMessage());
+        }
+    }
+
+    public static void reset() {
+        cuartetos.clear();
+        tempCounter = 0;
+        labelCounter = 0;
+    }
 }

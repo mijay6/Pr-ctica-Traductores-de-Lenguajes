@@ -1,0 +1,26 @@
+TABLA LOCAL #2:
+*LEXEMA: 'NOMBRE'
+	Atributos:
+	+ Tipo: 'cadena'
+	+ Despl: 2
+	+ Param: 0
+*LEXEMA: 'NUM2'
+	Atributos:
+	+ Tipo: 'entero'
+	+ Despl: 1
+	+ Param: 0
+*LEXEMA: 'NUM'
+	Atributos:
+	+ Tipo: 'entero'
+	+ Despl: 0
+	+ Param: 0
+----------------------------------------
+TABLA PRINCIPAL #1:
+*LEXEMA: 'TESTWRITEREAD'
+	Atributos:
+	+ Tipo: 'procedimiento'
+	+ numParam: 0
+	+ TipoParam: '-'
+	+ ModoParam: '-'
+	+ TipoRetorno: '-'
+	+ EtiqFuncion: 'main'

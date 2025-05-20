@@ -1,0 +1,18 @@
+program TestSuma;
+var 
+    h: string;
+    w: string;
+    x: integer;
+    y: integer;
+    z: integer;
+begin
+    x := 10;
+    y := 20;
+    z := x + y;
+    z := z + 10;    
+    write(z);
+    write(x + 5);
+    h := 'Hello';
+    w := 'World';
+    write(h + w);
+end;

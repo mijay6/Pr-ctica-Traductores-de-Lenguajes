@@ -31,12 +31,14 @@ public class Procesador {
 		String errorFile = "errores.txt";
 		String tsFile = "ts.txt";
 		String parse = "parse.txt";
+		String gciFile = "ci.txt";
 
 		// Entrada/Salida
 		BufferedReader ptrTest = null;
 		BufferedWriter ptwTokens = null;
 		BufferedWriter ptwError = null;
 		BufferedWriter ptwParse = null;
+		// TODO: Ver si es necesario el BufferedWriter para el GCI, y por ende todo lo demas hay que añadir en el try
 
 		try {
 			ptrTest = new BufferedReader(new FileReader(testFile));
@@ -46,7 +48,7 @@ public class Procesador {
 		
 		// Tabla de símbolos
 		gestorTS = new TS_Gestor(tsFile);
-		gestorTS.activarDebug();
+		//gestorTS.activarDebug();
 		gestorTS.createTPalabrasReservadas();
 
 		// Configuracion Gestor de error
@@ -60,10 +62,16 @@ public class Procesador {
 		// Configuracion Analizador sintactico
 		MT_ASINT.cargar_mt(slr_table);
 		ASin.setOutputParseFile(ptwParse);
-
+		
+		// Reinicia el gestor de GCI por si acaso
+		GCI.reset();
+		
 		// Inicio de ejecución: Analisis lexico, sintactico y semantico sincronizado
 		ASin.pedirTokens();
-
+		
+		// Escribir cuartetos al final
+		GCI.escribirCuartetos(gciFile);
+		
 		// Cierre
 		ptrTest.close();
 		ptwTokens.close();
@@ -86,7 +94,8 @@ public class Procesador {
 							+ "\n \t - Parse en \t\t\t'"+ currDir +"\\" + parse + "'" + 
 							"\n \t - Tokens en \t\t\t'" + currDir +"\\" +tokensFile + "'" +
 							"\n \t - Tabla de símbolos en \t'"+currDir +"\\" +tsFile + "'"
-							+"\n \t - Errores en \t\t\t'" + currDir +"\\" +errorFile + "'");
+							+"\n \t - Errores en \t\t\t'" + currDir +"\\" +errorFile + "'" +
+							"\n \t - Código Intermedio en \t'"+currDir +"\\" +gciFile + "'");
 
 	}
 

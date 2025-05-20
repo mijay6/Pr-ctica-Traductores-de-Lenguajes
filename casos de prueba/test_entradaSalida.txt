@@ -1,0 +1,18 @@
+program TestWriteRead;
+var
+    nombre : string;
+    num2 : integer;    
+    num : integer;
+begin
+    write(42);
+    write('hola mundo');
+    write(true);
+    write(true, 42, 'Madrid');
+	
+    writeln;      
+    writeln('Introduce dos numeros:');
+    read(num,num2);
+    writeln('Introduce tu nombre:');
+    read(nombre);
+
+end;

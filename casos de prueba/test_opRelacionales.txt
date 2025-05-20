@@ -1,0 +1,20 @@
+program TestRelacional;
+var 
+    x : integer;
+    y : integer;
+    reslogica : boolean;
+begin
+    x := 10;
+    y := 20;
+
+    reslogica := x < y;  
+    write(reslogica);    
+
+    reslogica := y < x;  
+    write(reslogica);    
+
+    reslogica := x < 10; 
+    write(reslogica);    
+    
+    write(3 < 7);        
+end;
